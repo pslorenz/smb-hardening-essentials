@@ -123,7 +123,7 @@ param(
 # Setup
 # ---------------------------------------------------------------------------
 
-$script:BaselineVersion = '0.1.9'
+$script:BaselineVersion = '0.1.9.1'
 $script:RunTimestamp    = Get-Date -Format 'yyyyMMdd-HHmmss'
 $script:RunId           = [guid]::NewGuid().ToString()
 $script:ScriptRoot      = $PSScriptRoot
@@ -399,10 +399,16 @@ if (-not $EndpointOnly) {
         # If a service isn't licensed in the tenant, Connect-Maester logs
         # a warning and continues — Maester then skips the affected
         # tests, which is the desired behavior.
-        Write-Log 'Connecting to Microsoft Graph, Exchange Online, Teams, SharePoint...'
+        # v0.1.9.1: Maester's -Service ValidateSet is
+        #   All, Azure, ExchangeOnline, Graph, SecurityCompliance, Teams
+        # No separate SharePoint value — SPO tests run under Graph or
+        # one of the other services. Using 'All' to cover everything
+        # available in the tenant; Connect-Maester will warn-and-continue
+        # for any service not licensed.
+        Write-Log 'Connecting Maester to all available services...'
         $connectParams = @{
             TenantId = $TenantId
-            Service  = @('Graph', 'ExchangeOnline', 'Teams', 'SharePoint')
+            Service  = 'All'
         }
         if ($NonInteractive) {
             if (-not ($ClientId -and $CertificateThumbprint)) {
