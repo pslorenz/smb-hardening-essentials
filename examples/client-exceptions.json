@@ -1,0 +1,42 @@
+{
+  "$schema": "https://raw.githubusercontent.com/pslorenz/smb-hardening-essentials/main/examples/client-exceptions.schema.json",
+  "client": "Acme Corporation",
+  "baselineVersion": "0.1.0",
+  "lastReviewed": "2026-04-15",
+
+  "exclusions": [
+    {
+      "controlId": "SMB-NET-005",
+      "reason": "Legacy Epson TM-L90 label printer on accounting floor requires NetBIOS over TCP/IP for discovery. Printer is VLAN-isolated from user network; replacement is scheduled in Q2 FY27 capex.",
+      "approvedBy": "J. Martinez, IT Director",
+      "approvedOn": "2026-04-10",
+      "expiresOn": "2027-06-30",
+      "compensatingControls": [
+        "Printer VLAN isolated from user network with ACL",
+        "Printer monitored by Defender for Endpoint (network protection on block)"
+      ]
+    },
+    {
+      "controlId": "SMB-OFF-005",
+      "reason": "Finance team uses signed Excel models with DDE links to external pricing service. Vendor has committed to removing DDE dependency in v8.2 (scheduled Q3 FY27).",
+      "approvedBy": "S. Lorenz, Security Lead",
+      "approvedOn": "2026-03-28",
+      "expiresOn": "2026-12-31",
+      "compensatingControls": [
+        "Macros signed by internal code-signing cert",
+        "Files opened from Protected Locations only (SMB-OFF-002 enforced)"
+      ]
+    },
+    {
+      "controlId": "SMB-SPO-005",
+      "reason": "Intune deployment in progress; compliance policies exist but not yet enforced via Conditional Access. Current state: Intune enrolled on all corporate devices, enforcement target Q2 FY26.",
+      "approvedBy": "S. Lorenz, Security Lead",
+      "approvedOn": "2026-04-01",
+      "expiresOn": "2026-07-31",
+      "compensatingControls": [
+        "MFA required for all OneDrive web access",
+        "Session sign-in frequency reduced to 8 hours for web access"
+      ]
+    }
+  ]
+}
