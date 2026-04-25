@@ -123,7 +123,7 @@ param(
 # Setup
 # ---------------------------------------------------------------------------
 
-$script:BaselineVersion = '0.1.9.1'
+$script:BaselineVersion = '0.1.10'
 $script:RunTimestamp    = Get-Date -Format 'yyyyMMdd-HHmmss'
 $script:RunId           = [guid]::NewGuid().ToString()
 $script:ScriptRoot      = $PSScriptRoot
@@ -456,6 +456,43 @@ if (-not $EndpointOnly) {
             $aggregate  = if ($entry.Aggregate) { $entry.Aggregate } else { 'Or' }
             $licenseReq = $entry.LicenseRequired
 
+            # Intentionally-unmapped entries: MaesterIds = @() and
+            # UnmappedReason populated. These are SMB-* controls in the
+            # baseline that have no automated test in Maester's catalog.
+            # Emit them as ManualVerification findings so they appear in
+            # the report with severity and reason — not as silent gaps.
+            if ($maesterIds.Count -eq 0) {
+                $reason = if ($entry.UnmappedReason) { $entry.UnmappedReason } else {
+                    'No automated test mapped. Verify manually.'
+                }
+                $sev = if ($entry.Severity) { $entry.Severity } else { 'Medium' }
+                $name = if ($entry.Name) { $entry.Name } else { $ctlId }
+                $category = switch -Regex ($ctlId) {
+                    '^SMB-IAM-'   { 'Identity'; break }
+                    '^SMB-EXO-'   { 'ExchangeOnline'; break }
+                    '^SMB-SPO-'   { 'SharePoint'; break }
+                    '^SMB-TEAMS-' { 'Teams'; break }
+                    '^SMB-AUD-'   { 'Audit'; break }
+                    '^SMB-DEV-'   { 'Device'; break }
+                    default       { 'Cloud' }
+                }
+                $maesterFindings += [pscustomobject]@{
+                    ControlId      = $ctlId
+                    Category       = $category
+                    Name           = $name
+                    Result         = 'ManualVerification'
+                    Severity       = $sev
+                    Details        = $reason
+                    Remediation    = Get-Remediation -ControlId $ctlId
+                    Source         = 'Maester'
+                    MaesterIds     = @()
+                    MaesterResults = @()
+                    Aggregate      = 'N/A'
+                    Disposition    = $entry.Disposition
+                }
+                continue
+            }
+
             # Resolve each mapped Maester ID to its result row (or null).
             $resolved = foreach ($mid in $maesterIds) {
                 if ($byId.ContainsKey($mid)) { $byId[$mid] } else { $null }
@@ -742,15 +779,16 @@ $summary = [pscustomobject]@{
     # ish contexts and (.Count) returns $null instead of 1. Symptom: the
     # exact counters that match exactly one finding render as blank in
     # the summary while zero/multi counters work fine.
-    Passed           = @($allFindings | Where-Object Result -EQ 'Passed').Count
-    Failed           = @($allFindings | Where-Object Result -EQ 'Failed').Count
-    NotRun           = @($allFindings | Where-Object Result -EQ 'NotRun').Count
-    Skipped          = @($allFindings | Where-Object Result -EQ 'Skipped').Count
-    NotApplicable    = @($allFindings | Where-Object Result -EQ 'NotApplicable').Count
-    NotMapped        = @($allFindings | Where-Object Result -EQ 'NotMapped').Count
-    Excepted         = @($allFindings | Where-Object Result -EQ 'Excepted').Count
-    CriticalFailures = @($allFindings | Where-Object { $_.Result -eq 'Failed' -and $_.Severity -eq 'Critical' }).Count
-    HighFailures     = @($allFindings | Where-Object { $_.Result -eq 'Failed' -and $_.Severity -eq 'High' }).Count
+    Passed             = @($allFindings | Where-Object Result -EQ 'Passed').Count
+    Failed             = @($allFindings | Where-Object Result -EQ 'Failed').Count
+    NotRun             = @($allFindings | Where-Object Result -EQ 'NotRun').Count
+    Skipped            = @($allFindings | Where-Object Result -EQ 'Skipped').Count
+    NotApplicable      = @($allFindings | Where-Object Result -EQ 'NotApplicable').Count
+    NotMapped          = @($allFindings | Where-Object Result -EQ 'NotMapped').Count
+    ManualVerification = @($allFindings | Where-Object Result -EQ 'ManualVerification').Count
+    Excepted           = @($allFindings | Where-Object Result -EQ 'Excepted').Count
+    CriticalFailures   = @($allFindings | Where-Object { $_.Result -eq 'Failed' -and $_.Severity -eq 'Critical' }).Count
+    HighFailures       = @($allFindings | Where-Object { $_.Result -eq 'Failed' -and $_.Severity -eq 'High' }).Count
 }
 
 $output = [pscustomobject]@{
@@ -895,7 +933,8 @@ High failures:       $($summary.HighFailures)
 Acknowledged excpt:  $($summary.Excepted)
 Not applicable:      $($summary.NotApplicable)
 Skipped (scope):     $($summary.Skipped)
-Not mapped:          $($summary.NotMapped)
+Manual verify req'd: $($summary.ManualVerification)
+Not mapped (drift):  $($summary.NotMapped)
 Not run (endpoint):  $($summary.NotRun)
 
 Top failing controls (by severity):

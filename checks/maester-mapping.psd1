@@ -321,4 +321,74 @@
         Notes           = 'CISA.MS.EXO.17.2 (Premium logging enabled) is tagged Deprecated in the v0.1.9 catalog. Using 17.3 (retention duration) as primary signal.'
     }
 
+    # ===================================================================
+    # Intentionally unmapped — surface as ManualVerification findings
+    # ===================================================================
+    # These SMB-* controls are part of the Tier 1 baseline but have NO
+    # automated test in Maester's catalog. They appear in reports as
+    # ManualVerification findings with severity and remediation, so the
+    # tech running the assessment knows to check them by hand. This is
+    # different from NotMapped (which signals catalog drift — a mapped
+    # ID that no longer exists upstream).
+    #
+    # Convention: MaesterIds = @() and UnmappedReason populated.
+
+    # Admin naming convention. No catalog test exists; this is a
+    # process/policy control verified manually.
+    'SMB-IAM-007' = @{
+        MaesterIds     = @()
+        UnmappedReason = 'Process control: admin account naming conventions cannot be validated by automated test. Verify during engagement that admin accounts follow the agreed convention (adm-*, admin_*, etc.).'
+        Severity       = 'Low'
+        Disposition    = 'Process'
+    }
+
+    # User SSPR. Catalog has EIDSCA.AP01 (admin SSPR) but no test for
+    # general user SSPR enablement. Candidate for upstream contribution.
+    'SMB-IAM-012' = @{
+        MaesterIds     = @()
+        UnmappedReason = 'No catalog test: Maester does not currently include a test for user-side Self-Service Password Reset enablement. EIDSCA.AP01 covers admin SSPR only. Verify manually in Entra ID > Password reset > Properties.'
+        Severity       = 'Medium'
+        Disposition    = 'NoCatalogTest'
+    }
+
+    # SharePoint default link type.
+    'SMB-SPO-002' = @{
+        MaesterIds     = @()
+        UnmappedReason = 'No catalog test: SharePoint default link type ("Specific people" vs "Anyone") is not covered by Maester. Verify in SharePoint admin center > Policies > Sharing > File and folder links > Default link type.'
+        Severity       = 'Medium'
+        Disposition    = 'NoCatalogTest'
+    }
+
+    # SharePoint Anyone link expiration.
+    'SMB-SPO-003' = @{
+        MaesterIds     = @()
+        UnmappedReason = 'No catalog test: Anyone link expiration window is not covered by Maester. Verify in SharePoint admin center > Policies > Sharing > Choose expiration and permissions options.'
+        Severity       = 'Medium'
+        Disposition    = 'NoCatalogTest'
+    }
+
+    # SharePoint accepting account match.
+    'SMB-SPO-004' = @{
+        MaesterIds     = @()
+        UnmappedReason = 'No catalog test: RequireAcceptingAccountMatchInvitedAccount is not covered by Maester. Verify with: Get-SPOTenant | Select RequireAcceptingAccountMatchInvitedAccount.'
+        Severity       = 'Medium'
+        Disposition    = 'NoCatalogTest'
+    }
+
+    # SharePoint compliant device requirement (Intune).
+    'SMB-SPO-005' = @{
+        MaesterIds     = @()
+        UnmappedReason = 'No catalog test: SharePoint Online compliant-device CA requirement is not directly covered. MT.1014 covers compliant-device for admins; this control needs the same enforcement scoped to SPO. Verify CA policies manually if Intune is deployed.'
+        Severity       = 'Medium'
+        Disposition    = 'NoCatalogTest'
+    }
+
+    # Teams guest access decision.
+    'SMB-TEAMS-002' = @{
+        MaesterIds     = @()
+        UnmappedReason = 'Process control: Teams guest access (On with controls vs Off) depends on the client collaboration model — neither configuration is universally correct. Verify the decision was made deliberately and matches the client SOW.'
+        Severity       = 'Low'
+        Disposition    = 'Process'
+    }
+
 }
