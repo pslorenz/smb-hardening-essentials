@@ -66,7 +66,7 @@
     $env:TEMP\smb-hardening-essentials\maester-tests. Persists across runs.
 
 .NOTES
-    Author:  pslorenz
+    Author:  Steven Lorenz (@pslorenz)
     License: MIT
     Version: 0.1.8
 #>
@@ -123,7 +123,7 @@ param(
 # Setup
 # ---------------------------------------------------------------------------
 
-$script:BaselineVersion = '0.1.8.1'
+$script:BaselineVersion = '0.1.8.2'
 $script:RunTimestamp    = Get-Date -Format 'yyyyMMdd-HHmmss'
 $script:RunId           = [guid]::NewGuid().ToString()
 $script:ScriptRoot      = $PSScriptRoot
@@ -709,15 +709,20 @@ $summary = [pscustomobject]@{
     Timestamp        = (Get-Date).ToString('o')
     BaselineVersion  = $script:BaselineVersion
     TotalControls    = $allFindings.Count
-    Passed           = ($allFindings | Where-Object Result -EQ 'Passed').Count
-    Failed           = ($allFindings | Where-Object Result -EQ 'Failed').Count
-    NotRun           = ($allFindings | Where-Object Result -EQ 'NotRun').Count
-    Skipped          = ($allFindings | Where-Object Result -EQ 'Skipped').Count
-    NotApplicable    = ($allFindings | Where-Object Result -EQ 'NotApplicable').Count
-    NotMapped        = ($allFindings | Where-Object Result -EQ 'NotMapped').Count
-    Excepted         = ($allFindings | Where-Object Result -EQ 'Excepted').Count
-    CriticalFailures = ($allFindings | Where-Object { $_.Result -eq 'Failed' -and $_.Severity -eq 'Critical' }).Count
-    HighFailures     = ($allFindings | Where-Object { $_.Result -eq 'Failed' -and $_.Severity -eq 'High' }).Count
+    # @(...) forces array semantics. Without it, Where-Object returning
+    # a single match unwraps to a scalar PSCustomObject in PS5.1 strict-
+    # ish contexts and (.Count) returns $null instead of 1. Symptom: the
+    # exact counters that match exactly one finding render as blank in
+    # the summary while zero/multi counters work fine.
+    Passed           = @($allFindings | Where-Object Result -EQ 'Passed').Count
+    Failed           = @($allFindings | Where-Object Result -EQ 'Failed').Count
+    NotRun           = @($allFindings | Where-Object Result -EQ 'NotRun').Count
+    Skipped          = @($allFindings | Where-Object Result -EQ 'Skipped').Count
+    NotApplicable    = @($allFindings | Where-Object Result -EQ 'NotApplicable').Count
+    NotMapped        = @($allFindings | Where-Object Result -EQ 'NotMapped').Count
+    Excepted         = @($allFindings | Where-Object Result -EQ 'Excepted').Count
+    CriticalFailures = @($allFindings | Where-Object { $_.Result -eq 'Failed' -and $_.Severity -eq 'Critical' }).Count
+    HighFailures     = @($allFindings | Where-Object { $_.Result -eq 'Failed' -and $_.Severity -eq 'High' }).Count
 }
 
 $output = [pscustomobject]@{
