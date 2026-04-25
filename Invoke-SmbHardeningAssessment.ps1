@@ -66,7 +66,7 @@
     $env:TEMP\smb-hardening-essentials\maester-tests. Persists across runs.
 
 .NOTES
-    Author:  Steven Lorenz (@pslorenz)
+    Author:  pslorenz
     License: MIT
     Version: 0.1.8
 #>
@@ -123,7 +123,7 @@ param(
 # Setup
 # ---------------------------------------------------------------------------
 
-$script:BaselineVersion = '0.1.8.2'
+$script:BaselineVersion = '0.1.9'
 $script:RunTimestamp    = Get-Date -Format 'yyyyMMdd-HHmmss'
 $script:RunId           = [guid]::NewGuid().ToString()
 $script:ScriptRoot      = $PSScriptRoot
@@ -384,14 +384,36 @@ if (-not $EndpointOnly) {
         }
 
         # Step 2: connect to the tenant.
-        Write-Log 'Connecting to Microsoft Graph...'
-        $connectParams = @{ TenantId = $TenantId }
+        # Connect-Maester defaults to Microsoft Graph only. Many of the
+        # curated tests we map to live in Exchange Online (CISA.MS.EXO.*,
+        # CIS.M365.2.*, CIS.M365.3.*, MT.10[34][0-9]), Teams (CIS.M365.8.*,
+        # MT.104[5-8]), or SharePoint (CISA.MS.SHAREPOINT.*). Without
+        # connecting to those services, Maester correctly skips the
+        # tests with "Not connected to <service>" — which we then
+        # classify as Skipped-Other and surface in findings as a
+        # configuration question, not a real result.
+        #
+        # v0.1.9: request all four services Maester supports. This
+        # opens additional consent screens on first run for ExchangeOnline
+        # and Teams admin permissions; subsequent runs use cached creds.
+        # If a service isn't licensed in the tenant, Connect-Maester logs
+        # a warning and continues — Maester then skips the affected
+        # tests, which is the desired behavior.
+        Write-Log 'Connecting to Microsoft Graph, Exchange Online, Teams, SharePoint...'
+        $connectParams = @{
+            TenantId = $TenantId
+            Service  = @('Graph', 'ExchangeOnline', 'Teams', 'SharePoint')
+        }
         if ($NonInteractive) {
             if (-not ($ClientId -and $CertificateThumbprint)) {
                 throw '-NonInteractive requires -ClientId and -CertificateThumbprint'
             }
             $connectParams['ClientId'] = $ClientId
             $connectParams['CertificateThumbprint'] = $CertificateThumbprint
+            # NOTE: cert-based auth in non-interactive mode currently
+            # only authenticates Graph. EXO/Teams/SharePoint cert-based
+            # auth requires per-service app registrations. v0.2 work.
+            Write-Log 'NonInteractive cert auth: only Graph is authenticated. EXO/Teams/SPO tests will be Skipped-Other.' -Level WARN
         }
         Connect-Maester @connectParams | Out-Null
         Write-Log 'Connected to tenant' -Level OK
