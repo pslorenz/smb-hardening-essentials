@@ -66,8 +66,7 @@
     $env:TEMP\smb-hardening-essentials\maester-tests. Persists across runs.
 
 .NOTES
-    Author:  Steven Lorenz (@pslorenz)
-    Date:    4/20/2026
+    Author:  pslorenz
     License: MIT
     Version: 0.1.8
 #>
@@ -124,10 +123,21 @@ param(
 # Setup
 # ---------------------------------------------------------------------------
 
-$script:BaselineVersion = '0.1.8'
+$script:BaselineVersion = '0.1.8.1'
 $script:RunTimestamp    = Get-Date -Format 'yyyyMMdd-HHmmss'
 $script:RunId           = [guid]::NewGuid().ToString()
 $script:ScriptRoot      = $PSScriptRoot
+
+# Resolve OutputPath to an absolute path BEFORE doing anything else. The
+# Maester phase calls Push-Location into the test cache directory, and
+# Maester (via Pester) runs many subprocesses that can also change CWD.
+# Any relative paths captured before that point will silently rebase
+# onto the cache dir and produce ghost output trees there. v0.1.8.1
+# fix: anchor every path that the wrapper writes to.
+if (-not (Test-Path $OutputPath)) {
+    $null = New-Item -ItemType Directory -Path $OutputPath -Force
+}
+$OutputPath = (Resolve-Path -Path $OutputPath -ErrorAction Stop).ProviderPath
 
 $safeName = $ClientName -replace '[^\w\s-]', '' -replace '\s+', ' '
 $runDir = Join-Path $OutputPath "$safeName\$script:RunTimestamp"
